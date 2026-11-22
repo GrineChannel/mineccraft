@@ -1,3 +1,4 @@
+import "./death.js";
 import { showMagic } from "./magic.js";
 import { practiceSummary } from "./practice.js";
 import { showClasses, showSkills, showQuests, showProgress } from "./progression.js";
@@ -72,7 +73,7 @@ function openProfile(player) {
   const form = new ActionFormData();
   form.title("§6Профиль персонажа");
   form.body("§fУровень: §e" + level + "\n§fОпыт: §a" + getValue(player, "xp") +
-    " / " + xpRequired(level) + "\n§fСвободные очки: §b" + getValue(player, "points") +
+    " / " + xpRequired(level) + "\n§fСмертей: §e" + getValue(player, "deaths") + "\n§fСвободные очки: §b" + getValue(player, "points") +
     "\n\n§6Характеристики:\n" + Object.entries(STATS).map(([key, name]) =>
       "§f" + name + ": §e" + getValue(player, key, 1)).join("\n"));
   form.button("§7Назад");

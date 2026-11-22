@@ -3,9 +3,9 @@ import { ActionFormData } from "@minecraft/server-ui";
 
 const PREFIX = "zrpg:";
 const CLASSES = [
-  { id: "warrior", name: "Воин", description: "Ближний бой и стойкость" },
-  { id: "ranger", name: "Следопыт", description: "Скорость и исследование" },
-  { id: "mage", name: "Маг", description: "Знания и магический потенциал" }
+  { id: "warrior", name: "Воин", description: "+2 Сила, +2 Выносливость", bonuses: {strength:2,endurance:2}, affinity:"power" },
+  { id: "ranger", name: "Следопыт", description: "+3 Ловкость, +1 Удача", bonuses: {agility:3,luck:1}, affinity:"vigor" },
+  { id: "mage", name: "Маг", description: "+3 Интеллект, +1 Удача", bonuses: {intelligence:3,luck:1}, affinity:"focus" }
 ];
 const SKILLS = [
   { id: "power", name: "Мощный удар", stat: "strength", description: "+1 к силе" },
@@ -48,7 +48,7 @@ export function showClasses(player, back) {
   const current = player.getDynamicProperty(PREFIX + "class") || "";
   const form = new ActionFormData().title("§dКлассы ZERO")
     .body(current ? "§fТвой класс: §e" + (CLASSES.find(c => c.id === current)?.name || current) :
-      "§7Выбери класс. Выбор постоянный для этого персонажа.");
+      "§7Выбери основной класс. Его бонусы постоянны, но все навыки доступны любому классу.");
   for (const item of CLASSES) form.button("§e" + item.name + "\n§7" + item.description);
   form.button("§7Назад");
   show(player, form, selection => {
@@ -57,6 +57,9 @@ export function showClasses(player, back) {
     if (!chosen) return;
     if (current) notify(player, "§cКласс уже выбран.");
     else {
+      for (const [stat, bonus] of Object.entries(chosen.bonuses)) {
+        put(player, stat, num(player, stat, 1) + bonus);
+      }
       player.setDynamicProperty(PREFIX + "class", chosen.id);
       notify(player, "§aВыбран класс: " + chosen.name);
     }
@@ -65,11 +68,14 @@ export function showClasses(player, back) {
 }
 export function showSkills(player, back) {
   const points = num(player, "skill_points");
+  const classId = player.getDynamicProperty(PREFIX + "class") || "";
+  const affinity = CLASSES.find(c => c.id === classId)?.affinity;
   const form = new ActionFormData().title("§bНавыки ZERO")
     .body("§fОчки навыков: §e" + points + "\n§7Навыки улучшаются до 5 ранга.");
   for (const skill of SKILLS) {
     const rank = num(player, "skill_" + skill.id);
-    form.button("§e" + skill.name + " §7" + rank + "/5\n" + skill.description);
+    const maxRank = skill.id === affinity ? 7 : 5;
+    form.button("§e" + skill.name + " §7" + rank + "/" + maxRank + "\n" + skill.description);
   }
   form.button("§7Назад");
   show(player, form, selection => {
@@ -77,8 +83,9 @@ export function showSkills(player, back) {
     const skill = SKILLS[selection];
     if (!skill) return;
     const rank = num(player, "skill_" + skill.id);
+    const maxRank = skill.id === affinity ? 7 : 5;
     if (points < 1) notify(player, "§cНедостаточно очков навыков.");
-    else if (rank >= 5) notify(player, "§eМаксимальный ранг.");
+    else if (rank >= maxRank) notify(player, "§eМаксимальный ранг.");
     else {
       put(player, "skill_" + skill.id, rank + 1);
       put(player, "skill_points", points - 1);

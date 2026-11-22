@@ -32,7 +32,8 @@ export function addExperience(player, amount) {
     xp -= levelRequirement(level);
     level++;
     put(player, "points", num(player, "points") + 5);
-    notify(player, "§aНовый уровень: §e" + level + "§a! +5 очков.");
+    put(player, "skill_points", num(player, "skill_points") + 1);
+    notify(player, "§aНовый уровень: §e" + level + "§a! +5 очков характеристик и +1 очко навыков.");
   }
   if (level >= 100) xp = Math.min(xp, levelRequirement(100));
   put(player, "level", level);

@@ -1,3 +1,4 @@
+import { showClasses, showSkills, showQuests, showProgress } from "./progression.js";
 import { world, system, ItemStack } from "@minecraft/server";
 import { ActionFormData } from "@minecraft/server-ui";
 
@@ -50,15 +51,16 @@ function openMainMenu(player) {
   form.title("§6§lZERO: RPG");
   form.body("§7Добро пожаловать в ZERO.\n\n§fУровень: §e" + level +
     "\n§fОпыт: §a" + xp + " / " + xpRequired(level) + "\n\n§6Выбери нужный раздел:");
-  for (const label of ["§eПрофиль персонажа", "§cХарактеристики", "§6Инвентарь", "§bНавыки", "§dКлассы", "§aЗадания", "§7Закрыть"]) form.button(label);
+  for (const label of ["§eПрофиль персонажа", "§cХарактеристики", "§6Инвентарь", "§bНавыки", "§dКлассы", "§aЗадания", "§dПрогресс", "§7Закрыть"]) form.button(label);
   showForm(player, form, selection => {
     switch (selection) {
       case 0: openProfile(player); break;
       case 1: openStats(player); break;
       case 2: openZeroInventory(player); break;
-      case 3: openComingSoon(player, "Навыки"); break;
-      case 4: openComingSoon(player, "Классы"); break;
-      case 5: openComingSoon(player, "Задания"); break;
+      case 3: showSkills(player, () => openMainMenu(player)); break;
+      case 4: showClasses(player, () => openMainMenu(player)); break;
+      case 5: showQuests(player, () => openMainMenu(player)); break;
+      case 6: showProgress(player, () => openMainMenu(player)); break;
     }
   });
 }
@@ -270,4 +272,4 @@ world.afterEvents.itemUse.subscribe(event => {
   if (event.itemStack.typeId !== BOOK_TYPE || event.itemStack.nameTag !== BOOK_NAME) return;
   system.run(() => openMainMenu(event.source));
 });
-console.warn("[ZERO RPG] Version 0.4.0 loaded");
+console.warn("[ZERO RPG] Version 1.0.0 development build loaded");

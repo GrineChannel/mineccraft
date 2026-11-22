@@ -1,3 +1,4 @@
+import { practiceSummary } from "./practice.js";
 import { showClasses, showSkills, showQuests, showProgress } from "./progression.js";
 import { world, system, ItemStack } from "@minecraft/server";
 import { ActionFormData } from "@minecraft/server-ui";
@@ -82,9 +83,12 @@ function openStats(player) {
     "\n\n§7Выбери характеристику для улучшения.\n§8Стоимость: 1 очко.");
   for (const [key, name] of Object.entries(STATS))
     form.button("§e" + name + "\n§7Текущее значение: " + getValue(player, key, 1));
+  form.button("§bПрогресс практики");
   form.button("§7Назад");
   showForm(player, form, selection => {
     const keys = Object.keys(STATS);
+    if (selection === keys.length) return openPractice(player);
+    if (selection === keys.length + 1) return openMainMenu(player);
     if (selection === keys.length) return openMainMenu(player);
     const key = keys[selection];
     if (!key) return;
@@ -255,6 +259,12 @@ function openStorageSlots(player) {
   showForm(player, form, () => openZeroInventory(player));
 }
 
+function openPractice(player) {
+  const form = new ActionFormData().title("§bРазвитие практикой")
+    .body("§7Характеристики растут от действий.\n\n" + practiceSummary(player));
+  form.button("§7Назад");
+  showForm(player, form, () => openStats(player));
+}
 function openComingSoon(player, section) {
   const form = new ActionFormData();
   form.title("§6" + section);

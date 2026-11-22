@@ -1,3 +1,4 @@
+import { registerSettlements } from "./states.js";
 import { advanceConstruction, repairConstruction, toggleConstruction, constructionStatus } from "./construction.js";
 import { world, system } from "@minecraft/server";
 import { ActionFormData } from "@minecraft/server-ui";
@@ -184,6 +185,6 @@ system.runInterval(()=>{
         repairConstruction(towns[id],residents[id][0]);
       }
     }
-    if(seen.size>0)save(towns);
+    if(seen.size>0){save(towns);registerSettlements(towns);}
   }catch(error){console.warn("[ZERO NPC SIM] "+error);}
 },600);

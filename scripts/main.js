@@ -52,7 +52,7 @@ function openMainMenu(player) {
   form.title("§6§lZERO: RPG");
   form.body("§7Добро пожаловать в ZERO.\n\n§fУровень: §e" + level +
     "\n§fОпыт: §a" + xp + " / " + xpRequired(level) + "\n\n§6Выбери нужный раздел:");
-  for (const label of ["§eПрофиль персонажа", "§cХарактеристики", "§6Инвентарь", "§bНавыки", "§dКлассы", "§aЗадания", "§dПрогресс", "§7Закрыть"]) form.button(label);
+  for (const label of ["§eПрофиль персонажа", "§cХарактеристики", "§6Инвентарь", "§bНавыки", "§dСвободное развитие", "§aЗадания", "§dПрогресс", "§7Закрыть"]) form.button(label);
   showForm(player, form, selection => {
     switch (selection) {
       case 0: openProfile(player); break;

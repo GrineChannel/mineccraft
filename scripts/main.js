@@ -1,3 +1,4 @@
+import { showProfessions } from "./professions.js";
 import { showStates } from "./states.js";
 import { showWorld } from "./worldgen.js";
 import { showNPC } from "./npc.js";
@@ -58,7 +59,7 @@ function openMainMenu(player) {
   form.title("§6§lZERO: RPG");
   form.body("§7Добро пожаловать в ZERO.\n\n§fУровень: §e" + level +
     "\n§fОпыт: §a" + xp + " / " + xpRequired(level) + "\n\n§6Выбери нужный раздел:");
-  for (const label of ["§eПрофиль персонажа", "§cХарактеристики", "§6Инвентарь", "§bНавыки", "§dСвободное развитие", "§aЗадания", "§dПрогресс", "§5Магия", "§6Экипировка", "§aЖивой мир", "§2Мир и открытия", "§6Государства", "§7Закрыть"]) form.button(label);
+  for (const label of ["§eПрофиль персонажа", "§cХарактеристики", "§6Инвентарь", "§bНавыки", "§dСвободное развитие", "§aЗадания", "§dПрогресс", "§5Магия", "§6Экипировка", "§aЖивой мир", "§2Мир и открытия", "§6Государства", "§eПрофессии", "§7Закрыть"]) form.button(label);
   showForm(player, form, selection => {
     switch (selection) {
       case 0: openProfile(player); break;
@@ -73,6 +74,7 @@ function openMainMenu(player) {
       case 9: showNPC(player, () => openMainMenu(player)); break;
       case 10: showWorld(player, () => openMainMenu(player)); break;
       case 11: showStates(player, () => openMainMenu(player)); break;
+      case 12: showProfessions(player, () => openMainMenu(player)); break;
     }
   });
 }

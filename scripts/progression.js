@@ -2,11 +2,6 @@ import { world, system } from "@minecraft/server";
 import { ActionFormData } from "@minecraft/server-ui";
 
 const PREFIX = "zrpg:";
-const CLASSES = [
-  { id: "warrior", name: "Воин", description: "+2 Сила, +2 Выносливость", bonuses: {strength:2,endurance:2}, affinity:"power" },
-  { id: "ranger", name: "Следопыт", description: "+3 Ловкость, +1 Удача", bonuses: {agility:3,luck:1}, affinity:"vigor" },
-  { id: "mage", name: "Маг", description: "+3 Интеллект, +1 Удача", bonuses: {intelligence:3,luck:1}, affinity:"focus" }
-];
 const SKILLS = [
   { id: "power", name: "Мощный удар", stat: "strength", description: "+1 к силе" },
   { id: "vigor", name: "Стойкость", stat: "endurance", description: "+1 к выносливости" },
@@ -45,36 +40,24 @@ function show(player, form, handler) {
   }).catch(error => console.warn("[ZERO RPG UI] " + error));
 }
 export function showClasses(player, back) {
-  const current = player.getDynamicProperty(PREFIX + "class") || "";
-  const form = new ActionFormData().title("§dКлассы ZERO")
-    .body(current ? "§fТвой класс: §e" + (CLASSES.find(c => c.id === current)?.name || current) :
-      "§7Выбери основной класс. Его бонусы постоянны, но все навыки доступны любому классу.");
-  for (const item of CLASSES) form.button("§e" + item.name + "\n§7" + item.description);
+  const form = new ActionFormData().title("§dСвободное развитие")
+    .body("§fВ ZERO: RPG нет обязательных классов.\n\n" +
+      "§7Ты можешь сочетать любые навыки, характеристики и направления. " +
+      "Роль персонажа определяется твоими решениями, а не выбором класса.");
+  form.button("§bПерейти к навыкам");
   form.button("§7Назад");
   show(player, form, selection => {
-    if (selection === CLASSES.length) return back();
-    const chosen = CLASSES[selection];
-    if (!chosen) return;
-    if (current) notify(player, "§cКласс уже выбран.");
-    else {
-      for (const [stat, bonus] of Object.entries(chosen.bonuses)) {
-        put(player, stat, num(player, stat, 1) + bonus);
-      }
-      player.setDynamicProperty(PREFIX + "class", chosen.id);
-      notify(player, "§aВыбран класс: " + chosen.name);
-    }
-    system.run(() => showClasses(player, back));
+    if (selection === 0) system.run(() => showSkills(player, back));
+    else back();
   });
 }
 export function showSkills(player, back) {
   const points = num(player, "skill_points");
-  const classId = player.getDynamicProperty(PREFIX + "class") || "";
-  const affinity = CLASSES.find(c => c.id === classId)?.affinity;
   const form = new ActionFormData().title("§bНавыки ZERO")
     .body("§fОчки навыков: §e" + points + "\n§7Навыки улучшаются до 5 ранга.");
   for (const skill of SKILLS) {
     const rank = num(player, "skill_" + skill.id);
-    const maxRank = skill.id === affinity ? 7 : 5;
+    const maxRank = 7;
     form.button("§e" + skill.name + " §7" + rank + "/" + maxRank + "\n" + skill.description);
   }
   form.button("§7Назад");
@@ -83,7 +66,7 @@ export function showSkills(player, back) {
     const skill = SKILLS[selection];
     if (!skill) return;
     const rank = num(player, "skill_" + skill.id);
-    const maxRank = skill.id === affinity ? 7 : 5;
+    const maxRank = 7;
     if (points < 1) notify(player, "§cНедостаточно очков навыков.");
     else if (rank >= maxRank) notify(player, "§eМаксимальный ранг.");
     else {

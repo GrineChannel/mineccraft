@@ -47,6 +47,8 @@ function validArea(dimension,cells) {
   for(const cell of cells) {
     const block=dimension.getBlock({x:cell.x,y:cell.y,z:cell.z});
     if(!isAir(block))return false;
+    const below=dimension.getBlock({x:cell.x,y:cell.y-1,z:cell.z});
+    if(!below)return false;
   }
   return true;
 }

@@ -55,7 +55,7 @@ function openMainMenu(player) {
     switch (selection) {
       case 0: openProfile(player); break;
       case 1: openStats(player); break;
-      case 2: openComingSoon(player, "Инвентарь"); break;
+      case 2: openZeroInventory(player); break;
       case 3: openComingSoon(player, "Навыки"); break;
       case 4: openComingSoon(player, "Классы"); break;
       case 5: openComingSoon(player, "Задания"); break;
@@ -96,6 +96,163 @@ function openStats(player) {
     system.run(() => openStats(player));
   });
 }
+
+const STORAGE_KEY = "zrpg:storage_v1";
+const STORAGE_SLOTS = 30;
+
+// Stores only ordinary, unmodified item stacks. Custom metadata is deliberately
+// rejected so that enchantments, durability and custom names cannot be lost.
+function readStorage(player) {
+  try {
+    const raw = player.getDynamicProperty(STORAGE_KEY);
+    if (typeof raw !== "string") return Array(STORAGE_SLOTS).fill(null);
+    const data = JSON.parse(raw);
+    if (!Array.isArray(data) || data.length !== STORAGE_SLOTS) throw new Error("Invalid storage shape");
+    return data.map(entry => {
+      if (entry === null) return null;
+      if (!entry || typeof entry.id !== "string" || !/^minecraft:[a-z0-9_]+$/.test(entry.id) ||
+          !Number.isInteger(entry.count) || entry.count < 1 || entry.count > 64) throw new Error("Invalid item");
+      return { id: entry.id, count: entry.count };
+    });
+  } catch (error) {
+    console.warn("[ZERO STORAGE] Invalid saved data: " + error);
+    player.sendMessage("§c[ZERO] Ошибка данных хранилища. Запись заблокирована.");
+    return null;
+  }
+}
+function writeStorage(player, data) {
+  player.setDynamicProperty(STORAGE_KEY, JSON.stringify(data));
+}
+function simpleItem(item) {
+  if (!item || item.nameTag || item.getLore().length > 0) return false;
+  if (item.getComponent("minecraft:enchantable") || item.getComponent("minecraft:durability")) return false;
+  // Restrict to stackable items to avoid discarding unique item data.
+  return item.isStackable && item.maxAmount > 1;
+}
+function openZeroInventory(player) {
+  const slots = readStorage(player);
+  if (!slots) return;
+  const used = slots.filter(Boolean).length;
+  const form = new ActionFormData().title("§6Хранилище ZERO")
+    .body("§fЗанято: §e" + used + "/" + STORAGE_SLOTS +
+          "\\n§7Пока поддерживаются обычные предметы без чар и прочих свойств.");
+  form.button("§aПоложить предмет");
+  form.button("§bЗабрать предмет");
+  form.button("§eПосмотреть ячейки");
+  form.button("§7Назад");
+  showForm(player, form, selection => {
+    if (selection === 0) openDeposit(player);
+    else if (selection === 1) openWithdraw(player);
+    else if (selection === 2) openStorageSlots(player);
+    else if (selection === 3) openMainMenu(player);
+  });
+}
+function openDeposit(player) {
+  const inventory = player.getComponent("minecraft:inventory")?.container;
+  if (!inventory) return;
+  const options = [];
+  const form = new ActionFormData().title("§aПоложить в ZERO")
+    .body("§7Выбери стопку из обычного инвентаря.");
+  for (let i = 0; i < inventory.size; i++) {
+    const item = inventory.getItem(i);
+    if (!simpleItem(item) || item.typeId === BOOK_TYPE) continue;
+    options.push(i);
+    form.button("§f" + item.typeId + " §e×" + item.amount);
+  }
+  if (!options.length) form.body("§7Нет подходящих обычных предметов.");
+  form.button("§7Назад");
+  showForm(player, form, selection => {
+    if (selection === options.length) return openZeroInventory(player);
+    const index = options[selection];
+    if (index === undefined) return;
+    const item = inventory.getItem(index);
+    const slots = readStorage(player);
+    if (!slots || !simpleItem(item) || item.typeId === BOOK_TYPE) return;
+    const empty = slots.findIndex(x => x === null);
+    if (empty < 0) {
+      player.sendMessage("§cХранилище ZERO заполнено!");
+      return openZeroInventory(player);
+    }
+    // Save before removing from the inventory; rollback on inventory failure.
+    slots[empty] = { id: item.typeId, count: item.amount };
+    try {
+      writeStorage(player, slots);
+      inventory.setItem(index, undefined);
+      player.sendMessage("§a[ZERO] Предмет помещён в ячейку " + (empty + 1));
+    } catch (error) {
+      slots[empty] = null;
+      try { writeStorage(player, slots); } catch (_) {}
+      player.sendMessage("§c[ZERO] Ошибка переноса. Проверь предметы.");
+      console.warn("[ZERO STORAGE] Deposit failed: " + error);
+    }
+    system.run(() => openZeroInventory(player));
+  });
+}
+function openWithdraw(player) {
+  const slots = readStorage(player);
+  if (!slots) return;
+  const options = [];
+  const form = new ActionFormData().title("§bЗабрать из ZERO")
+    .body("§7Выбери ячейку для извлечения.");
+  slots.forEach((entry, index) => {
+    if (!entry) return;
+    options.push(index);
+    form.button("§f" + (index + 1) + ". " + entry.id + " §e×" + entry.count);
+  });
+  if (!options.length) form.body("§7Хранилище пусто.");
+  form.button("§7Назад");
+  showForm(player, form, selection => {
+    if (selection === options.length) return openZeroInventory(player);
+    const index = options[selection];
+    if (index === undefined) return;
+    const current = readStorage(player);
+    const inventory = player.getComponent("minecraft:inventory")?.container;
+    if (!current || !inventory || !current[index]) return;
+    const entry = current[index];
+    let item;
+    try { item = new ItemStack(entry.id, entry.count); }
+    catch (error) {
+      player.sendMessage("§c[ZERO] Неизвестный предмет. Ячейка сохранена.");
+      return;
+    }
+    // Only withdraw if a complete stack fits in an empty inventory slot.
+    let free = false;
+    for (let i = 0; i < inventory.size; i++) {
+      if (!inventory.getItem(i)) { free = true; break; }
+    }
+    if (!free) {
+      player.sendMessage("§cОсвободи одну ячейку обычного инвентаря!");
+      return openZeroInventory(player);
+    }
+    const leftover = inventory.addItem(item);
+    if (leftover) {
+      player.sendMessage("§c[ZERO] Предмет не поместился. Проверь инвентарь.");
+      return;
+    }
+    current[index] = null;
+    try { writeStorage(player, current); }
+    catch (error) {
+      // The item was given; keeping storage data prevents silent loss,
+      // but the player must be warned about possible duplication.
+      player.sendMessage("§c[ZERO] Ошибка сохранения! Не повторяй извлечение.");
+      console.warn("[ZERO STORAGE] Withdraw save failed: " + error);
+      return;
+    }
+    player.sendMessage("§a[ZERO] Предмет извлечён из ячейки " + (index + 1));
+    system.run(() => openZeroInventory(player));
+  });
+}
+function openStorageSlots(player) {
+  const slots = readStorage(player);
+  if (!slots) return;
+  const form = new ActionFormData().title("§e30 ячеек ZERO")
+    .body(slots.map((entry, index) =>
+      "§7" + (index + 1) + ". " + (entry ? "§f" + entry.id + " §e×" + entry.count : "§8Пусто")
+    ).join("\\n"));
+  form.button("§7Назад");
+  showForm(player, form, () => openZeroInventory(player));
+}
+
 function openComingSoon(player, section) {
   const form = new ActionFormData();
   form.title("§6" + section);
@@ -113,4 +270,4 @@ world.afterEvents.itemUse.subscribe(event => {
   if (event.itemStack.typeId !== BOOK_TYPE || event.itemStack.nameTag !== BOOK_NAME) return;
   system.run(() => openMainMenu(event.source));
 });
-console.warn("[ZERO RPG] Version 0.3.0 loaded");
+console.warn("[ZERO RPG] Version 0.4.0 loaded");

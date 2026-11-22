@@ -1,3 +1,4 @@
+import { showNPC } from "./npc.js";
 import { showEquipment } from "./equipment.js";
 import "./death.js";
 import { showMagic } from "./magic.js";
@@ -55,7 +56,7 @@ function openMainMenu(player) {
   form.title("§6§lZERO: RPG");
   form.body("§7Добро пожаловать в ZERO.\n\n§fУровень: §e" + level +
     "\n§fОпыт: §a" + xp + " / " + xpRequired(level) + "\n\n§6Выбери нужный раздел:");
-  for (const label of ["§eПрофиль персонажа", "§cХарактеристики", "§6Инвентарь", "§bНавыки", "§dСвободное развитие", "§aЗадания", "§dПрогресс", "§5Магия", "§6Экипировка", "§7Закрыть"]) form.button(label);
+  for (const label of ["§eПрофиль персонажа", "§cХарактеристики", "§6Инвентарь", "§bНавыки", "§dСвободное развитие", "§aЗадания", "§dПрогресс", "§5Магия", "§6Экипировка", "§aЖивой мир", "§7Закрыть"]) form.button(label);
   showForm(player, form, selection => {
     switch (selection) {
       case 0: openProfile(player); break;
@@ -67,6 +68,7 @@ function openMainMenu(player) {
       case 6: showProgress(player, () => openMainMenu(player)); break;
       case 7: showMagic(player, () => openMainMenu(player)); break;
       case 8: showEquipment(player, () => openMainMenu(player)); break;
+      case 9: showNPC(player, () => openMainMenu(player)); break;
     }
   });
 }

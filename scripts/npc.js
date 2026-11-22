@@ -1,3 +1,4 @@
+import { advanceConstruction, repairConstruction, toggleConstruction, constructionStatus } from "./construction.js";
 import { world, system } from "@minecraft/server";
 import { ActionFormData } from "@minecraft/server-ui";
 
@@ -16,7 +17,7 @@ function settlementId(villager) {
 }
 function createTown(id,location) {
   return {id,name:"Поселение "+Math.abs(Math.floor(location.x/128))+"-"+Math.abs(Math.floor(location.z/128)),
-    food:30,materials:10,wealth:10,security:30,knowledge:0,level:1,days:0};
+    food:30,materials:10,wealth:10,security:30,knowledge:0,level:1,days:0,constructionEnabled:false,buildings:[],center:{x:Math.floor(location.x),y:Math.floor(location.y),z:Math.floor(location.z)}};
 }
 function bounded(value,min,max){return Math.max(min,Math.min(max,value));}
 function number(entity,key,initial) {
@@ -134,9 +135,26 @@ export function showNPC(player,back) {
       "\n§7Поселения: §e"+ids.length+"\n\n"+(details.join("\n")||"Жителей поблизости нет.")+
       "\n\n§8Симуляция работает только рядом с игроками.");
   form.button("§bПоговорить с ближайшим жителем");
+  form.button("§6Строительство поселения");
   form.button("§7Назад");
   show(player,form,index=>{
-    if(index===1)return back();
+    if(index===2)return back();
+    if(index===1){
+      const nearest=findNearest(player);
+      if(!nearest)return back();
+      const id=settlementId(nearest);const data=load();
+      if(!data[id])data[id]=createTown(id,nearest.location);
+      const town=data[id];
+      const buildForm=new ActionFormData().title("§6Развитие поселения")
+        .body(constructionStatus(town)+"\n§8Внимание: NPC будут устанавливать блоки в мире.");
+      buildForm.button(town.constructionEnabled?"§cОтключить строительство":"§aРазрешить строительство");
+      buildForm.button("§7Назад");
+      show(player,buildForm,choice=>{
+        if(choice===0){toggleConstruction(town);save(data);}
+        system.run(()=>showNPC(player,back));
+      });
+      return;
+    }
     const nearest=findNearest(player);
     if(!nearest){player.sendMessage("§c[ZERO] Поблизости нет жителей.");return back();}
     talk(player,nearest,()=>showNPC(player,back));
@@ -161,6 +179,10 @@ system.runInterval(()=>{
     for(const id of Object.keys(residents)) {
       for(const villager of residents[id])social(villager,residents[id]);
       advanceTown(towns[id]);
+      if(residents[id].length>0){
+        advanceConstruction(towns[id],residents[id][0]);
+        repairConstruction(towns[id],residents[id][0]);
+      }
     }
     if(seen.size>0)save(towns);
   }catch(error){console.warn("[ZERO NPC SIM] "+error);}

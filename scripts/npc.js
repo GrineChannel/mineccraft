@@ -115,15 +115,9 @@ function talk(player,villager,back) {
       set(villager,"relationships",bounded(number(villager,"relationships",0)+5,0,100));
       player.sendMessage("§a"+name+": Рад встрече! Наше поселение постепенно развивается.");
     } else if(index===1) {
-      const inv=player.getComponent("minecraft:inventory")?.container;
       const towns=load();const id=settlementId(villager);
       const town=towns[id]||createTown(id,villager.location);
-      if(town.food>=5&&inv) {
-        try {
-          const {itemStack}= {itemStack:null}; // trade handled by vanilla villager UI
-          player.sendMessage("§eДля торговли предметами используй обычный интерфейс жителя. Ресурсы поселения: "+town.food+" еды.");
-        }catch(_){}
-      } else player.sendMessage("§eТорговля доступна через обычный интерфейс жителя.");
+      player.sendMessage("§eТорговля предметами доступна через обычный интерфейс жителя. Запасы поселения: "+town.food+" еды.");
     } else return back();
     system.run(()=>talk(player,villager,back));
   });
